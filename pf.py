@@ -109,11 +109,45 @@ def predict_stock_price(ticker):
     future_price = model.predict([[future_days]])
     return future_price[0]
 
+def get_nse_top_gainers():
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
+        session = requests.Session()
+        session.get("https://www.nseindia.com", headers=headers)
+        response = session.get("https://www.nseindia.com/api/live-analysis-variations?index=gainersAll", headers=headers)
+        data = response.json()
+        df = pd.DataFrame(data['data'])[['symbol', 'lastPrice', 'pChange']]
+        df.columns = ['Symbol', 'Last Price (₹)', '% Change']
+        return df.head(10)
+    except Exception as e:
+        st.error(f"Error fetching NSE top gainers: {e}")
+        return None
+
+def get_nse_top_losers():
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
+        session = requests.Session()
+        session.get("https://www.nseindia.com", headers=headers)
+        response = session.get("https://www.nseindia.com/api/live-analysis-variations?index=loosersAll", headers=headers)
+        data = response.json()
+        df = pd.DataFrame(data['data'])[['symbol', 'lastPrice', 'pChange']]
+        df.columns = ['Symbol', 'Last Price (₹)', '% Change']
+        return df.head(10)
+    except Exception as e:
+        st.error(f"Error fetching NSE top losers: {e}")
+        return None
+    
+
 # App layout
 st.title("Stocks Investing Dashboard")
 st.sidebar.title("Portfolio Management")
-menu = st.sidebar.radio("Choose an option:", ["Add Stock", "View Portfolio", "Analyze Portfolio", "AI Insights", "News", "Help"])
-
+menu = st.sidebar.radio("Choose an option:", ["Add Stock", "View Portfolio", "Analyze Portfolio", "AI Insights", "Market Overview", "News", "Help"])
 # Refresh Button
 if st.sidebar.button("Refresh Data"):
     refresh_stock_data()
@@ -169,43 +203,7 @@ if menu == "Add Stock":
     st.write("### Current Portfolio")
     st.table(pd.DataFrame(st.session_state["portfolio"]))
 
-# View Portfolio Page
-# elif menu == "View Portfolio":
-#     st.subheader("Current Portfolio with Market Value and Profit/Loss")
-
-#     if st.session_state["portfolio"]["Ticker"]:
-#         df = pd.DataFrame(st.session_state["portfolio"])
-#         df = calculate_portfolio_metrics(df)
-
-#         # Sort by profit percentage in ascending order
-#         df = df.sort_values(by="Return (%)", ascending=True)
-
-#         # Display the table without index
-#         st.table(df.reset_index(drop=True))
-
-#         total_investment = df["Total Investment"].sum()
-#         total_profit_loss = df["Total Profit/Loss"].sum()
-#         overall_return = (total_profit_loss / total_investment) * 100
-
-#         st.write(f"### Total Investment: ₹{total_investment:,.2f}")
-#         st.write(f"### Total Profit/Loss: ₹{total_profit_loss:,.2f}")
-#         st.write(f"### Overall Return: {overall_return:.2f}%")
-
-#         # Portfolio Visualization
-#         st.subheader("Portfolio Distribution")
-#         fig = px.pie(df, names='Ticker', values='Market Value', title="Portfolio Distribution")
-#         st.plotly_chart(fig)
-
-#         # Stock Removal
-#         st.subheader("Remove Stock from Portfolio")
-#         ticker_to_remove = st.selectbox("Select a stock to remove:", df["Ticker"])
-#         if st.button("Remove Stock"):
-#             index = df["Ticker"].tolist().index(ticker_to_remove)
-#             for key in st.session_state["portfolio"]:
-#                 st.session_state["portfolio"][key].pop(index)
-#             st.success(f"Removed {ticker_to_remove} from your portfolio.")
-#             st.rerun()
-# Add these visualizations to the "View Portfolio" section
+#View portfolio
 if menu == "View Portfolio":
     st.subheader("Current Portfolio with Market Value and Profit/Loss")
 
@@ -324,7 +322,35 @@ elif menu == "Analyze Portfolio":
                 st.warning("No data available for the selected timeframe.")
     else:
         st.warning("Your portfolio is empty! Add some stocks first.")
+elif menu == "Market Overview":
+    st.subheader("Top Gainers & Losers - NSE")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 🔼 Top 10 Gainers")
+        gainers = get_nse_top_gainers()
+        if gainers is not None:
+            st.dataframe(gainers.style.format({
+                'Last Price (₹)': '{:.2f}',
+                '% Change': '{:.2f}%'
+            }), height=400)
+        else:
+            st.warning("Failed to fetch NSE gainers data")
 
+    with col2:
+        st.markdown("### 🔽 Top 10 Losers")
+        losers = get_nse_top_losers()
+        if losers is not None:
+            st.dataframe(losers.style.format({
+                'Last Price (₹)': '{:.2f}',
+                '% Change': '{:.2f}%'
+            }), height=400)
+        else:
+            st.warning("Failed to fetch NSE losers data")
+
+    st.markdown("---")
+    st.write("Note: BSE data is currently not available due to API limitations")
 # AI Insights Page
 elif menu == "AI Insights":
     st.subheader("AI-Powered Stock Insights")
