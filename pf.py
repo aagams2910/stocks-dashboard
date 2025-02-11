@@ -334,7 +334,7 @@ elif menu == "Market Overview":
     with col1:
         st.markdown("### 🔼 Top 10 Gainers")
         gainers = get_nse_top_gainers()
-        if gainers is not None:
+        if not gainers.empty:
             st.dataframe(gainers.style.format({
                 'Last Price (₹)': '{:.2f}',
                 '% Change': '{:.2f}%'
@@ -345,7 +345,7 @@ elif menu == "Market Overview":
     with col2:
         st.markdown("### 🔽 Top 10 Losers")
         losers = get_nse_top_losers()
-        if losers is not None:
+        if not losers.empty:
             st.dataframe(losers.style.format({
                 'Last Price (₹)': '{:.2f}',
                 '% Change': '{:.2f}%'
@@ -354,8 +354,7 @@ elif menu == "Market Overview":
             st.warning("Failed to fetch NSE losers data")
 
     st.markdown("---")
-    st.write("Note: BSE data is currently not available due to API limitations")
-# AI Insights Page
+    st.write("Note: BSE data is currently not available due to API limitations")# AI Insights Page
 elif menu == "AI Insights":
     st.subheader("AI-Powered Stock Insights")
 
