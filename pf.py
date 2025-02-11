@@ -117,14 +117,15 @@ def get_nse_top_gainers():
         }
         session = requests.Session()
         session.get("https://www.nseindia.com", headers=headers)
-        response = session.get("https://www.nseindia.com/api/live-analysis-variations?index=gainersAll", headers=headers)
+        response = session.get("https://www.nseindia.com/api/live-analysis-variations?index=gainers", headers=headers)
+        response.raise_for_status()  # Raise an error for bad status codes
         data = response.json()
         df = pd.DataFrame(data['data'])[['symbol', 'lastPrice', 'pChange']]
         df.columns = ['Symbol', 'Last Price (₹)', '% Change']
         return df.head(10)
     except Exception as e:
         st.error(f"Error fetching NSE top gainers: {e}")
-        return None
+        return pd.DataFrame(columns=['Symbol', 'Last Price (₹)', '% Change'])
 
 def get_nse_top_losers():
     try:
@@ -134,12 +135,15 @@ def get_nse_top_losers():
         }
         session = requests.Session()
         session.get("https://www.nseindia.com", headers=headers)
-        response = session.get("https://www.nseindia.com/api/live-analysis-variations?index=loosersAll", headers=headers)
+        response = session.get("https://www.nseindia.com/api/live-analysis-variations?index=losers", headers=headers)
+        response.raise_for_status()  # Raise an error for bad status codes
         data = response.json()
         df = pd.DataFrame(data['data'])[['symbol', 'lastPrice', 'pChange']]
         df.columns = ['Symbol', 'Last Price (₹)', '% Change']
         return df.head(10)
     except Exception as e:
+        st.error(f"Error fetching NSE top losers: {e}")
+        return pd.DataFrame(columns=['Symbol', 'Last Price (₹)', '% Change'])
         st.error(f"Error fetching NSE top losers: {e}")
         return None
     
