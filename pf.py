@@ -120,9 +120,22 @@ def get_nse_top_gainers():
         response = session.get("https://www.nseindia.com/api/live-analysis-variations?index=gainers", headers=headers)
         response.raise_for_status()  # Raise an error for bad status codes
         data = response.json()
-        df = pd.DataFrame(data['data'])[['symbol', 'lastPrice', 'pChange']]
-        df.columns = ['Symbol', 'Last Price (₹)', '% Change']
-        return df.head(10)
+
+        # Check if 'data' key exists in the response
+        if 'data' not in data:
+            st.error("Unexpected API response format: 'data' key not found.")
+            return pd.DataFrame(columns=['Symbol', 'Last Price (₹)', '% Change'])
+
+        # Extract relevant data
+        df = pd.DataFrame(data['data'])
+        if not df.empty:
+            df = df[['symbol', 'lastPrice', 'pChange']]
+            df.columns = ['Symbol', 'Last Price (₹)', '% Change']
+            return df.head(10)
+        else:
+            st.error("No data found in the API response.")
+            return pd.DataFrame(columns=['Symbol', 'Last Price (₹)', '% Change'])
+
     except Exception as e:
         st.error(f"Error fetching NSE top gainers: {e}")
         return pd.DataFrame(columns=['Symbol', 'Last Price (₹)', '% Change'])
@@ -138,15 +151,25 @@ def get_nse_top_losers():
         response = session.get("https://www.nseindia.com/api/live-analysis-variations?index=losers", headers=headers)
         response.raise_for_status()  # Raise an error for bad status codes
         data = response.json()
-        df = pd.DataFrame(data['data'])[['symbol', 'lastPrice', 'pChange']]
-        df.columns = ['Symbol', 'Last Price (₹)', '% Change']
-        return df.head(10)
+
+        # Check if 'data' key exists in the response
+        if 'data' not in data:
+            st.error("Unexpected API response format: 'data' key not found.")
+            return pd.DataFrame(columns=['Symbol', 'Last Price (₹)', '% Change'])
+
+        # Extract relevant data
+        df = pd.DataFrame(data['data'])
+        if not df.empty:
+            df = df[['symbol', 'lastPrice', 'pChange']]
+            df.columns = ['Symbol', 'Last Price (₹)', '% Change']
+            return df.head(10)
+        else:
+            st.error("No data found in the API response.")
+            return pd.DataFrame(columns=['Symbol', 'Last Price (₹)', '% Change'])
+
     except Exception as e:
         st.error(f"Error fetching NSE top losers: {e}")
-        return pd.DataFrame(columns=['Symbol', 'Last Price (₹)', '% Change'])
-        st.error(f"Error fetching NSE top losers: {e}")
-        return None
-    
+        return pd.DataFrame(columns=['Symbol', 'Last Price (₹)', '% Change'])    
 
 # App layout
 st.title("Stocks Investing Dashboard")
