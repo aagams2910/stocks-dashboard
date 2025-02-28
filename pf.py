@@ -3,7 +3,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import random
-
+import time
 import json
 import plotly.graph_objects as go
 import plotly.express as px
@@ -81,6 +81,10 @@ def calculate_portfolio_metrics(df):
     df["Total Investment"] = df["Shares"] * df["Purchase Price"]
     df["Total Profit/Loss"] = df["Market Value"] - df["Total Investment"]
     df["Return (%)"] = ((df["Total Profit/Loss"] / df["Total Investment"]) * 100).round(2)
+    
+    # Add Profit/Loss Label
+    df["Status"] = df["Total Profit/Loss"].apply(lambda x: "Profit" if x > 0 else "Loss")
+    
     return df
 
 # Function to fetch financial news
