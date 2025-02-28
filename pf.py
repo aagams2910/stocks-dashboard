@@ -75,18 +75,23 @@ def refresh_stock_data():
     st.rerun()
 
 # Function to calculate portfolio metrics
-def calculate_portfolio_metrics(df):
-    df["Current Price"] = [yf.Ticker(f"{ticker}.NS").history(period="1d")["Close"].iloc[-1] for ticker in df["Ticker"]]
-    df["Market Value"] = df["Shares"] * df["Current Price"]
-    df["Total Investment"] = df["Shares"] * df["Purchase Price"]
-    df["Total Profit/Loss"] = df["Market Value"] - df["Total Investment"]
-    df["Return (%)"] = ((df["Total Profit/Loss"] / df["Total Investment"]) * 100).round(2)
-    
-    # Add Profit/Loss Label
-    df["Status"] = df["Total Profit/Loss"].apply(lambda x: "Profit" if x > 0 else "Loss")
-    
-    return df
 
+def calculate_portfolio_metrics(df):
+    current_prices = []
+    for ticker in df["Ticker"]:
+        try:
+            history = yf.Ticker(f"{ticker}.NS").history(period="1d")
+            if not history.empty:
+                current_price = history["Close"].iloc[-1]
+            else:
+                current_price = None  # Or use df.loc[...] = previous close as fallback
+        except Exception as e:
+            print(f"Error fetching data for {ticker}: {e}")
+            current_price = None
+        current_prices.append(current_price)
+
+    df["Current Price"] = current_prices
+    return df
 # Function to fetch financial news
 def fetch_financial_news():
     api_key = "YOUR_NEWS_API_KEY"  # Replace with your API key
