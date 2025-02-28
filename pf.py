@@ -45,18 +45,24 @@ if "last_refresh_time" not in st.session_state:
     st.session_state["last_refresh_time"] = 0
 
 # Predefined list of NSE stock tickers
-nse_tickers = ["RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "KOTAKBANK", "SBIN", "LT", "ITC"]
-
+# Updated list of verified NSE tickers
+nse_tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", 
+               "ICICIBANK.NS", "KOTAKBANK.NS", "SBIN.NS", "LT.NS", 
+               "ITC.NS", "ASIANPAINT.NS", "HINDUNILVR.NS", "BAJFINANCE.NS"]
 # Function to check if ticker is valid
 @st.cache_data
 def is_valid_ticker(ticker):
     try:
-        data = yf.Ticker(f"{ticker}.NS").history(period="1d")
-        return not data.empty  # Check if data is not empty
+        stock = yf.Ticker(ticker)
+        # Check multiple validity indicators
+        if not stock.info or 'regularMarketPrice' not in stock.info:
+            return False
+        # Verify historical data availability
+        hist = stock.history(period="1d")
+        return not hist.empty
     except Exception as e:
-        st.warning(f"Error fetching data for {ticker}: {e}")
+        st.warning(f"Validation failed for {ticker}: {str(e)}")
         return False
-
 # Function to add stock to portfolio
 def add_stock_to_portfolio(ticker, shares, purchase_price=None):
     if ticker in st.session_state["portfolio"]["Ticker"]:
@@ -75,32 +81,18 @@ def refresh_stock_data():
     st.rerun()
 
 # Function to calculate portfolio metrics
-
 def calculate_portfolio_metrics(df):
-    current_prices = []
-    for ticker in df["Ticker"]:
-        try:
-            history = yf.Ticker(f"{ticker}.NS").history(period="1d")
-            if not history.empty:
-                current_price = history["Close"].iloc[-1]
-            else:
-                current_price = None  # Or use df.loc[...] = previous close as fallback
-        except Exception as e:
-            print(f"Error fetching data for {ticker}: {e}")
-            current_price = None
-        current_prices.append(current_price)
-
-    df["Current Price"] = current_prices
+    df["Current Price"] = [yf.Ticker(f"{ticker}.NS").history(period="1d")["Close"].iloc[-1] for ticker in df["Ticker"]]
+    df["Market Value"] = df["Shares"] * df["Current Price"]
+    df["Total Investment"] = df["Shares"] * df["Purchase Price"]
+    df["Total Profit/Loss"] = df["Market Value"] - df["Total Investment"]
+    df["Return (%)"] = ((df["Total Profit/Loss"] / df["Total Investment"]) * 100).round(2)
+    
+    # Add Profit/Loss Label
+    df["Status"] = df["Total Profit/Loss"].apply(lambda x: "Profit" if x > 0 else "Loss")
+    
     return df
-# Function to fetch financial news
-def fetch_financial_news():
-    api_key = "YOUR_NEWS_API_KEY"  # Replace with your API key
-    url = f"https://newsapi.org/v2/everything?q=stocks&apiKey={api_key}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()["articles"]
-    else:
-        return []
+
 
 # Function to predict stock price using linear regression
 def predict_stock_price(ticker):
@@ -225,15 +217,22 @@ if menu == "Add Stock":
         else:
             st.warning("Invalid ticker! Please enter a valid stock ticker.")
 
-    if st.button("Add Random NSE Stocks"):
-        random_stocks = random.sample(nse_tickers, 5)
-        for stock in random_stocks:
+if st.button("Add Random NSE Stocks"):
+    random_stocks = random.sample(nse_tickers, 5)
+    for stock in random_stocks:
+        try:
+            # Fetch data and check if available
+            stock_data = yf.Ticker(f"{stock}.NS").history(period="1d")
+            if stock_data.empty:
+                st.warning(f"No data available for {stock}. Skipping.")
+                continue
             shares = random.randint(1, 50)
-            avg_purchase_price = yf.Ticker(f"{stock}.NS").history(period="1d")["Close"].iloc[-1]
+            avg_purchase_price = stock_data["Close"].iloc[-1]
             add_stock_to_portfolio(stock, shares, avg_purchase_price)
-        
-        st.success("Random NSE stocks added to your portfolio!")
-
+        except Exception as e:
+            st.warning(f"Error adding {stock}: {str(e)}. Skipping.")
+            continue
+    st.success("Random NSE stocks added to your portfolio!")
     st.write("### Current Portfolio")
     st.table(pd.DataFrame(st.session_state["portfolio"]))
 
@@ -469,17 +468,6 @@ elif menu == "AI Insights":
     else:
         st.warning("Your portfolio is empty! Add some stocks first.")
 # News Page
-elif menu == "News":
-    st.subheader("Latest Financial News")
-    news_articles = fetch_financial_news()
-    if news_articles:
-        for article in news_articles[:5]:  # Display top 5 articles
-            st.write(f"**{article['title']}**")
-            st.write(article["description"])
-            st.write(f"[Read more]({article['url']})")
-            st.write("---")
-    else:
-        st.warning("Unable to fetch news at the moment.")
 
 # Help Page
 elif menu == "Help":
